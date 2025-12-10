@@ -1,16 +1,42 @@
-# React + Vite
+# Shineray IT Asset Manager (ITAM)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Sistema corporativo para gestão de ativos de TI, licenças de software e auditoria de inventário.
 
-Currently, two official plugins are available:
+## 🚀 Tecnologias
+- **Frontend:** React + Vite
+- **Estilo:** Tailwind CSS
+- **Backend/Auth:** Firebase (Firestore, Auth)
+- **Deploy:** Vercel
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## ⚙️ Funcionalidades
+- Dashboard Gerencial (KPIs)
+- Gestão de Ativos (CRUD + Histórico)
+- Controle de Licenças de Software
+- Gestão de Projetos e Tarefas
+- Auditoria Mobile via QR Code
+- Impressão de Etiquetas e Termos
 
-## React Compiler
+## 📦 Como rodar localmente
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+1. Clone o projeto:
+\`\`\`bash
+git clone https://github.com/SEU_USUARIO/itam-shineray.git
+\`\`\`
 
-## Expanding the ESLint configuration
+2. Instale as dependências:
+\`\`\`bash
+npm install
+\`\`\`
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+3. Configure as variáveis de ambiente:
+Crie um arquivo `.env` na raiz com as chaves do Firebase:
+\`\`\`env
+VITE_API_KEY=sua_chave_aqui
+VITE_AUTH_DOMAIN=seu_projeto.firebaseapp.com
+...
+\`\`\`
+
+4. Rode o servidor:
+\`\`\`bash
+npm run dev
+\`\`\`
