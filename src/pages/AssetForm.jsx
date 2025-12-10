@@ -1,9 +1,8 @@
 // src/pages/AssetForm.jsx
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { db } from '../services/firebase';
-import { doc, getDoc, addDoc, updateDoc, collection, serverTimestamp } from 'firebase/firestore';
-import { getEmployees } from '../services/employeeService'; 
+import { getEmployees } from '../services/employeeService';
+import { createAsset, updateAsset, getAssetById } from '../services/assetService';
 import { Save, ArrowLeft, Search, Smartphone, Monitor, Printer, Network, CreditCard, Megaphone } from 'lucide-react';
 
 const AssetForm = () => {
@@ -12,6 +11,7 @@ const AssetForm = () => {
   const [loading, setLoading] = useState(false);
   const [employees, setEmployees] = useState([]); 
 
+  // ESTADO INICIAL: Todos os campos começam como string vazia ''
   const [formData, setFormData] = useState({
     model: '',
     internalId: '',
@@ -22,13 +22,14 @@ const AssetForm = () => {
     assignedTo: '', 
     clientCpf: '',
     sector: '',
-    vendedor: '', // <--- NOVO CAMPO
+    vendedor: '', 
     employeeId: '', 
     purchaseDate: '',
     serialNumber: '',
     imei1: '', 
     imei2: '', 
     valor: '',
+    notes: '', 
     specs: { ip: '', ram: '', storage: '' }
   });
 
@@ -39,15 +40,34 @@ const AssetForm = () => {
             setEmployees(empList);
 
             if (id) {
-                const docRef = doc(db, 'assets', id);
-                const docSnap = await getDoc(docRef);
-                if (docSnap.exists()) {
-                    const data = docSnap.data();
+                const data = await getAssetById(id);
+                
+                if (data) {
+                    // --- A CORREÇÃO DO ERRO ESTÁ AQUI ---
+                    // Usamos || '' para garantir que NENHUM campo seja undefined
                     setFormData({ 
-                        ...data, 
-                        vendedor: data.vendedor || '', // Garante que carregue vazio se não existir
+                        model: data.model || '',
+                        internalId: data.internalId || '',
+                        type: data.type || 'Computador',
+                        category: data.category || 'Corporativo',
+                        status: data.status || 'Em Uso',
+                        location: data.location || 'Matriz - Belém',
+                        assignedTo: data.assignedTo || '', 
+                        clientCpf: data.clientCpf || '',
+                        sector: data.sector || '',
+                        vendedor: data.vendedor || '', 
+                        employeeId: data.employeeId || '', 
+                        purchaseDate: data.purchaseDate || '',
+                        serialNumber: data.serialNumber || '',
+                        imei1: data.imei1 || '', 
+                        imei2: data.imei2 || '', 
+                        valor: data.valor || '',
+                        notes: data.notes || '', 
                         specs: data.specs || { ip: '', ram: '', storage: '' } 
                     });
+                } else {
+                    alert("Ativo não encontrado.");
+                    navigate('/assets');
                 }
             }
         } catch (error) {
@@ -55,7 +75,7 @@ const AssetForm = () => {
         }
     };
     init();
-  }, [id]);
+  }, [id, navigate]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -69,7 +89,12 @@ const AssetForm = () => {
 
   const handleEmployeeSelect = (e) => {
     const selectedName = e.target.value;
-    if (!selectedName) return;
+    if (!selectedName) {
+        // Se limpou o campo, limpa os dados vinculados
+        setFormData(prev => ({ ...prev, assignedTo: '', clientCpf: '', sector: '', employeeId: '' }));
+        return;
+    }
+    
     const emp = employees.find(ep => ep.name === selectedName);
     if (emp) {
         setFormData(prev => ({
@@ -88,18 +113,18 @@ const AssetForm = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+    
     try {
         const cleanData = JSON.parse(JSON.stringify(formData));
-        const dataToSave = { ...cleanData, updatedAt: serverTimestamp() };
 
         if (id) {
-            await updateDoc(doc(db, 'assets', id), dataToSave);
-            alert("Ativo atualizado com sucesso!");
+            await updateAsset(id, cleanData); // Aguarda o update
         } else {
-            await addDoc(collection(db, 'assets'), { ...dataToSave, createdAt: serverTimestamp() });
-            alert("Ativo cadastrado com sucesso!");
+            await createAsset(cleanData); // Aguarda o create
         }
-        navigate('/assets');
+        
+        navigate('/assets'); // Só sai depois de salvar
+        
     } catch (error) {
         console.error("Erro ao salvar:", error);
         alert("Erro ao salvar.");
@@ -191,7 +216,6 @@ const AssetForm = () => {
                         )}
                     </div>
 
-                    {/* CAMPO EXCLUSIVO PARA VENDEDOR (SÓ APARECE SE FOR PROMOCIONAL) */}
                     {isPromotional && (
                         <div className="md:col-span-2 bg-pink-50 p-4 rounded-lg border border-pink-100">
                             <label className="block text-sm font-bold text-pink-700 mb-1">Vendedor Vinculado</label>
@@ -260,13 +284,19 @@ const AssetForm = () => {
             <div>
                 <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4 border-b pb-2">Especificações Técnicas</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                     <div><label className="block text-sm font-bold text-gray-700 mb-1">Serial Number</label><input name="serialNumber" value={formData.serialNumber} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-black outline-none" /></div>
+                      <div><label className="block text-sm font-bold text-gray-700 mb-1">Serial Number</label><input name="serialNumber" value={formData.serialNumber} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-black outline-none" /></div>
                     <div><label className="block text-sm font-bold text-gray-700 mb-1">IMEI 1 (Celulares)</label><input name="imei1" value={formData.imei1} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-black outline-none font-mono" placeholder="Ex: 3569..." /></div>
                     <div><label className="block text-sm font-bold text-gray-700 mb-1">IMEI 2 (Opcional)</label><input name="imei2" value={formData.imei2} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-black outline-none font-mono" /></div>
                     <div><label className="block text-sm font-bold text-gray-700 mb-1">Endereço IP</label><input name="specs.ip" value={formData.specs.ip} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-black outline-none" placeholder="192.168..." /></div>
                     <div><label className="block text-sm font-bold text-gray-700 mb-1">Valor do Ativo (R$)</label><input name="valor" value={formData.valor} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-black outline-none" placeholder="R$ 0,00" /></div>
                     <div><label className="block text-sm font-bold text-gray-700 mb-1">Data de Aquisição</label><input type="date" name="purchaseDate" value={formData.purchaseDate} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-black outline-none" /></div>
                 </div>
+            </div>
+
+            {/* Bloco 4: Observações */}
+            <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1">Observações</label>
+                <textarea name="notes" value={formData.notes} onChange={handleChange} rows="3" className="w-full p-2 border border-gray-300 rounded outline-none focus:ring-2 focus:ring-black" placeholder="Detalhes adicionais..." />
             </div>
 
             <div className="pt-4">

@@ -1,7 +1,11 @@
 // src/pages/AssetList.jsx
-import React, { useState, useRef } from 'react';
-import { useAssets } from '../hooks/useAssets'; 
-import { updateAsset } from '../services/assetService'; // <--- IMPORTANTE: Importar o update
+import React, { useState, useEffect, useRef } from 'react';
+// REMOVIDO: import { useAssets } from '../hooks/useAssets';
+// ADICIONADO:
+import { db } from '../services/firebase';
+import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
+
+import { updateAsset } from '../services/assetService';
 import { Link } from 'react-router-dom';
 import * as XLSX from 'xlsx'; 
 import { useReactToPrint } from 'react-to-print'; 
@@ -16,15 +20,38 @@ import {
 } from 'lucide-react';
 
 const AssetList = () => {
-  const { assets, loading, refreshAssets } = useAssets(); // <--- Pegamos o refreshAssets
+  // --- ESTADO LOCAL (Agora gerenciado pelo onSnapshot) ---
+  const [assets, setAssets] = useState([]);
+  const [loading, setLoading] = useState(true);
+
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('Todos');
   const [sortOrder, setSortOrder] = useState('asc');
-  
+   
   // --- ESTADOS DE AÇÃO EM MASSA ---
   const [selectedIds, setSelectedIds] = useState([]);
-  const [isStatusModalOpen, setIsStatusModalOpen] = useState(false); // Modal de Status
-  const [bulkProcessing, setBulkProcessing] = useState(false); // Loading do processo
+  const [isStatusModalOpen, setIsStatusModalOpen] = useState(false); 
+  const [bulkProcessing, setBulkProcessing] = useState(false); 
+
+  // --- MUDANÇA PRINCIPAL: LISTA EM TEMPO REAL ---
+  useEffect(() => {
+    setLoading(true);
+    const q = query(collection(db, 'assets'), orderBy('createdAt', 'desc'));
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const assetData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setAssets(assetData);
+      setLoading(false);
+    }, (error) => {
+      console.error("Erro ao sincronizar ativos:", error);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   // --- CONFIGURAÇÃO DE IMPRESSÃO EM MASSA ---
   const bulkPrintRef = useRef();
@@ -108,15 +135,13 @@ const AssetList = () => {
       
       setBulkProcessing(true);
       try {
-          // Cria uma promessa para cada atualização (executa em paralelo para ser rápido)
           const updates = selectedIds.map(id => updateAsset(id, { status: newStatus }));
-          
           await Promise.all(updates);
           
           alert("Status atualizados com sucesso!");
-          setSelectedIds([]); // Limpa seleção
-          setIsStatusModalOpen(false); // Fecha modal
-          refreshAssets(); // Recarrega a lista para ver as novas cores
+          setSelectedIds([]); 
+          setIsStatusModalOpen(false); 
+          // O refreshAssets() foi removido pois o onSnapshot atualizará a tela sozinho
       } catch (error) {
           console.error("Erro na atualização em massa:", error);
           alert("Erro ao atualizar alguns itens.");
